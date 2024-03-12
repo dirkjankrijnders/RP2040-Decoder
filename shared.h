@@ -24,18 +24,22 @@
 // - also note that with logging enabled GPIO0/1 are DISABLED from decoder functions because they are used for uart to the
 //   outside world (this is configure automatically for you below!)
 // - IMPORTANT: you have to enable uart in the cmakelists.txt to enable logging!
-#define LOGLEVEL 0
+#define LOGLEVEL 20
+#define SEPARATE_ACK 1
+#define MOTOR_CONTROL 0
 #define LOG(level, ...) { if(level <= LOGLEVEL) {printf(__VA_ARGS__);}}
 
 // Constant Value of 125 x 10^6
 #define _125M 125000000
 
 // GPIO used for DCC-Signal, Motor PWM or ADC
-#define DCC_INPUT_PIN 21u
-#define MOTOR_FWD_PIN 23u
+#define DCC_INPUT_PIN 2u
+#define MOTOR_FWD_PIN 21u
 #define MOTOR_REV_PIN 22u
 #define FWD_V_EMF_ADC_PIN 28u
 #define REV_V_EMF_ADC_PIN 29u
+
+#define DCC_ACK_PIN 23u
 
 // if logging is enabled do NOT use gpio0/1 for functions in the decoder
 #if LOGLEVEL != 0

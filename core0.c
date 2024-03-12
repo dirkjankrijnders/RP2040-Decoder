@@ -93,6 +93,14 @@ void adc_offset_adjustment(const uint32_t n) {
 
 // Confirmation after writing or verifying a CV
 // Works by creating a spike in current consumption, this is detected by the command station
+#ifdef SEPARATE_ACK
+void acknowledge() {
+    LOG(10, "ACK\n");
+    gpio_put(DCC_ACK_PIN, 1);
+    busy_wait_ms(6);
+    gpio_put(DCC_ACK_PIN, 0);
+}
+#else
 void acknowledge() {
     const uint16_t max_lvl = _125M / (CV_ARRAY_FLASH[8] * 100 + 10000);
     pwm_set_gpio_level(MOTOR_FWD_PIN, max_lvl);
@@ -102,7 +110,7 @@ void acknowledge() {
     busy_wait_ms(3);
     pwm_set_gpio_level(MOTOR_REV_PIN, 0);
 }
-
+#endif
 
 // When bit matches sent byte -> acknowledge()
 void verify_cv_bit(const uint16_t cv_address, const bool bit_val, const uint8_t bit_pos) {
@@ -127,6 +135,7 @@ void regular_cv_write(const uint16_t cv_index, const uint8_t cv_data) {
     CV_ARRAY_TEMP[cv_index] = cv_data;
     flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
     flash_range_program(FLASH_TARGET_OFFSET, CV_ARRAY_TEMP, FLASH_PAGE_SIZE * 2);
+    LOG(10, "Written CV: %u, value: %u\n", cv_index, cv_data);
     acknowledge();
 }
 
@@ -273,6 +282,9 @@ void set_outputs(const uint32_t functions_to_set_bitmask) {
         }
         temp_mask <<= 1;
     }
+    char buffer[33];
+    itoa(functions_to_set_bitmask, buffer, 2);
+    LOG(10, "functions: %s\n", buffer);
 }
 
 
@@ -421,6 +433,7 @@ void instruction_evaluation(const uint8_t number_of_bytes, const uint8_t *const 
 // Check for reset message - When reset message is found, stop the motor and disable all functions.
 bool reset_message_check(const uint8_t number_of_bytes, const uint8_t *const byte_array) {
     if (byte_array[number_of_bytes - 1] == 0b00000000 && byte_array[number_of_bytes - 2] == 0b00000000) {
+        LOG(10, "Reset message recieved\n");
         const bool direction = get_direction_of_speed_step(speed_step_target);
         // Set previous speed step target to current speed step target
         speed_step_target_prev = speed_step_target;
@@ -468,6 +481,11 @@ void evaluate_message() {
         bits_to_byte_array(number_of_bytes, byte_array);
         // Check for errors
         if (error_detection(number_of_bytes, byte_array)) {
+            LOG(10, "Recieved DDC Packet: ")
+            for (uint8_t ii = 0; ii < number_of_bytes; ii++) {
+                LOG(10, "0x%08x ", byte_array[ii] );
+            }
+            LOG(10, "\n");
             // Check for matching address
             if (address_evaluation(number_of_bytes, byte_array)) {
                 reset_message_flag = false;
@@ -594,7 +612,7 @@ void cv_setup_check() {
 
     // Check for base PWM configuration - used for feed-forward
     // Forward Direction
-    if (get_16bit_CV(175) == 0) {
+    if (get_16bit_CV(175) == 0 && false) {
         LOG(1, "found cv[175] equals to 0, forward direction\n");
         const uint16_t base_pwm_fwd = measure_base_pwm(true, 10);
         const uint8_t base_pwm_fwd_high_byte = base_pwm_fwd >> 8;
@@ -605,7 +623,7 @@ void cv_setup_check() {
         program_mode(4, arr1);
     }
     // Reverse Direction
-    if (get_16bit_CV(177) == 0) {
+    if (get_16bit_CV(177) == 0 && false) {
         LOG(1, "found cv[177] equals to 0, reverse direction\n");
         const uint16_t base_pwm_rev = measure_base_pwm(false, 10);
         const uint8_t base_pwm_rev_high_byte = base_pwm_rev >> 8;
@@ -650,21 +668,24 @@ int main() {
     stdio_init_all();
     LOG(1, "\n\n======\ncore0 init\n");
     LOG(1, "Init motor PWM\n");
-    init_motor_pwm(MOTOR_FWD_PIN);
-    init_motor_pwm(MOTOR_REV_PIN);
+    //init_motor_pwm(MOTOR_FWD_PIN);
+    //init_motor_pwm(MOTOR_REV_PIN);
     LOG(1, "Init ADC")
-    init_adc();
+    //init_adc();
     LOG(1, "check cvs\n");
     cv_setup_check();
+    LOG(10, "DCC Address: %u\n", CV_ARRAY_FLASH[0])
     LOG(1, "init outputs\n");
     init_outputs();
     LOG(1, "init gpios\n");
+    gpio_init(DCC_ACK_PIN);
+    gpio_set_dir(DCC_ACK_PIN, GPIO_OUT);
     gpio_init(DCC_INPUT_PIN);
     gpio_set_dir(DCC_INPUT_PIN, GPIO_IN);
     gpio_pull_up(DCC_INPUT_PIN);
     gpio_set_irq_enabled_with_callback(DCC_INPUT_PIN, GPIO_IRQ_EDGE_RISE, true, &track_signal_rise);
     LOG(1, "core0 done\n");
     busy_wait_ms(100);
-    multicore_launch_core1(core1_entry);
+    //multicore_launch_core1(core1_entry);
     while (true);
 }
