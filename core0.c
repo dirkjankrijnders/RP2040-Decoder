@@ -97,7 +97,7 @@ void adc_offset_adjustment(const uint32_t n) {
 void acknowledge() {
     LOG(10, "ACK\n");
     gpio_put(DCC_ACK_PIN, 1);
-    busy_wait_ms(6);
+    busy_wait_ms(7);
     gpio_put(DCC_ACK_PIN, 0);
 }
 #else
@@ -481,11 +481,11 @@ void evaluate_message() {
         bits_to_byte_array(number_of_bytes, byte_array);
         // Check for errors
         if (error_detection(number_of_bytes, byte_array)) {
-            LOG(10, "Recieved DDC Packet: ")
+            /*LOG(10, "Recieved DDC Packet: ")
             for (uint8_t ii = 0; ii < number_of_bytes; ii++) {
                 LOG(10, "0x%08x ", byte_array[ii] );
             }
-            LOG(10, "\n");
+            LOG(10, "\n");*/
             // Check for matching address
             if (address_evaluation(number_of_bytes, byte_array)) {
                 reset_message_flag = false;
@@ -537,6 +537,7 @@ void init_outputs() {
     gpio_init_mask(GPIO_ALLOWED_OUTPUTS);
     gpio_set_dir_out_masked(GPIO_ALLOWED_OUTPUTS);  // Note: This might also disable UART on GPIO0 & GPIO1
     const uint32_t PWM_enabled_outputs = get_32bit_CV(111) & GPIO_ALLOWED_OUTPUTS;
+    LOG(11, "GPIO enabled: %#08x", PWM_enabled_outputs);
     uint32_t mask = 1;
     for (uint8_t i = 0; i < 32; ++i) {
         if (PWM_enabled_outputs & mask) {
@@ -547,8 +548,9 @@ void init_outputs() {
             const uint8_t clock_divider = CV_ARRAY_FLASH[117 + 7 * slice] + 1;
             gpio_set_function(i, GPIO_FUNC_PWM);
             pwm_set_wrap(slice, wrap);
-            pwm_set_gpio_level(i, 0);
-            level_table[i] = level;
+            pwm_set_gpio_level(i, 60000);
+            LOG(11, "GPIO: %u, slice: %u, channel: %u, CV wrap: %u, wrap: %u, level: %u, clk_divider: %u\n", i, slice, channel, 115 + 7 * slice, wrap, level, clock_divider);
+            level_table[i] = 60000; //level;
             pwm_set_clkdiv_int_frac(slice, clock_divider, 0);
             pwm_set_enabled(slice, true);
         }
@@ -612,7 +614,7 @@ void cv_setup_check() {
 
     // Check for base PWM configuration - used for feed-forward
     // Forward Direction
-    if (get_16bit_CV(175) == 0 && false) {
+    /* if (get_16bit_CV(175) == 0 && false) {
         LOG(1, "found cv[175] equals to 0, forward direction\n");
         const uint16_t base_pwm_fwd = measure_base_pwm(true, 10);
         const uint8_t base_pwm_fwd_high_byte = base_pwm_fwd >> 8;
@@ -635,6 +637,7 @@ void cv_setup_check() {
     }
     LOG(1, "int_lim_max %d\n", CV_ARRAY_FLASH[51]);
     LOG(1, "int_lim_min %d\n", CV_ARRAY_FLASH[52]);
+*/
 }
 
 
@@ -671,7 +674,7 @@ int main() {
     //init_motor_pwm(MOTOR_FWD_PIN);
     //init_motor_pwm(MOTOR_REV_PIN);
     LOG(1, "Init ADC")
-    //init_adc();
+    init_adc();
     LOG(1, "check cvs\n");
     cv_setup_check();
     LOG(10, "DCC Address: %u\n", CV_ARRAY_FLASH[0])
@@ -685,7 +688,12 @@ int main() {
     gpio_pull_up(DCC_INPUT_PIN);
     gpio_set_irq_enabled_with_callback(DCC_INPUT_PIN, GPIO_IRQ_EDGE_RISE, true, &track_signal_rise);
     LOG(1, "core0 done\n");
-    busy_wait_ms(100);
-    //multicore_launch_core1(core1_entry);
-    while (true);
-}
+    // busy_wait_ms(100);
+    // multicore_launch_core1(core1_entry);
+    while (true); /* {
+        sleep_ms(16);
+        gpio_put(DCC_ACK_PIN, 1);
+        sleep_ms(6);
+        gpio_put(DCC_ACK_PIN, 0);
+    }*/
+    }

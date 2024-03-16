@@ -313,6 +313,7 @@ void core1_entry() {
                                       speed_helper,
                                       pid,
                                       &speed_helper_timer);
+    
     LOG(1, "core1 done\n");
     while (true);
 }
