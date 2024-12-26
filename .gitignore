@@ -23,3 +23,12 @@ KiCad/*/fp-info-cache
 KiCad/*/_autosave-*
 KiCad/*/*.kicad_prl
 
+CMakeFiles/
+pico-sdk
+pioasm
+generated
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+RP2040-Decoder.elf
+RP2040-Decoder.elf.map
