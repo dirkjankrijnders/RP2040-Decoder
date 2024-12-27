@@ -232,7 +232,7 @@ void program_mode(const uint8_t number_of_bytes, const uint8_t *const byte_array
             alarm_pool_destroy(speed_helper_timer.pool);
         }
 
-        multicore_reset_core1();
+        // multicore_reset_core1();
 
         const uint32_t saved_interrupts = save_and_disable_interrupts();
 
@@ -264,7 +264,7 @@ void program_mode(const uint8_t number_of_bytes, const uint8_t *const byte_array
         // Restore interrupts
         restore_interrupts(saved_interrupts);
         // TODO: verify core1 launch...
-        multicore_launch_core1(core1_entry);
+        // multicore_launch_core1(core1_entry);
         // TODO: Check busy wait necessity
         busy_wait_ms(5);
     }
@@ -763,7 +763,7 @@ int main()
     gpio_set_irq_enabled_with_callback(DCC_INPUT_PIN, GPIO_IRQ_EDGE_RISE, true, &track_signal_rise);
     LOG(1, "core0 done\n");
     busy_wait_ms(100);
-    multicore_launch_core1(core1_entry);
+    // multicore_launch_core1(core1_entry);
     while (true)
         ; /* {
 sleep_ms(16);
